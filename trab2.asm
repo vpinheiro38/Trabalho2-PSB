@@ -62,17 +62,56 @@ inc dword [j]
 
 ; ------------------ PRINT STRING ----------------------
 
-%macro print 2
+%macro print 3
     mov dword [eaz], eax
     mov dword [ebz], ebx
     mov dword [ecz], ecx
     mov dword [edz], edx
     
-    mov eax,4
-    mov ebx,1
-    mov ecx,%1
-    mov edx,%2
-    int 80h
+    mov dword [k], 0
+    
+    forPrint%3:
+        mov ecx, [k]
+        cmp ecx, %2
+        je endPrint%3
+        
+        cmp byte [%1+ecx], 0
+        jge greaterZero%3
+        
+        mov byte [printV], '-'
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, printV
+        mov edx, 1
+        int 80h
+        
+        mov ecx, [k]
+        
+        mov byte al, 0
+        sub al, [%1+ecx]
+        mov [%1+ecx], al
+        
+        greaterZero%3:
+            mov al, [%1+ecx]
+            mov [printV], al
+        
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, printV
+        mov edx, 1
+        int 80h
+        
+        mov byte [printV], ' '
+        
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, printV
+        mov edx, 1
+        int 80h
+    
+        inc dword [k]
+        jmp forPrint%3
+    endPrint%3:
     
     mov eax, [eaz]
     mov ebx, [ebz]
@@ -102,67 +141,6 @@ inc dword [j]
 
 ; -----------------------------------------------------
 
-%macro regGetValue 3 ; regGetValue eax, ebx (index)
-    dec dword %2
-    cmp dword [array+%2], '-'
-    jne noNeg%3
-    
-    inc dword %2
-    mov dword %1, 0
-    sub %1, [array+%2]
-    ;add dword %1, '0'
-    jmp endGetValue%3
-    
-    noNeg%3:
-        inc dword %2
-        mov %1, [array+%2]
-        ;sub dword %1, '0'
-    
-    endGetValue%3:
-%endmacro
-
-%macro memGetValue 3 ; memGetValue [pivot], eax (index)
-    dec dword %2
-    cmp dword [array+%2], '-'
-    jne noNeg%3
-    
-    mov dword ebx, 0
-    inc dword %2
-    sub ebx, [array+%2]
-    ;add dword ebx, '0'
-    mov %1, ebx
-    jmp endGetValue%3
-    
-    noNeg%3:
-        inc dword %2
-        mov ebx, [array+%2]
-        ;sub dword ebx, '0'
-        mov %1, ebx
-    
-    endGetValue%3:
-%endmacro
-
-%macro memCmpValue 3
-    dec dword %2
-    cmp dword [array+%2], '-'
-    jne noNeg%3
-    
-    inc dword %2
-    mov dword ebx, 0
-    sub ebx, [array+%2]
-    ;add dword ebx, '0'
-    jmp endGetValue%3
-    
-    noNeg%3:
-        inc dword %2
-        mov ebx, [array+%2]
-        ;sub dword ebx, '0'
-    
-    endGetValue%3:
-    
-    cmp ebx, %1
-%endmacro
-
 section .data
     len:       dd    100
     lenA:      dd    0
@@ -183,6 +161,8 @@ section .data
     testeC:    db    'C'
     newLine:   db    10
     str:       db    0
+    printV:    db    0
+    k:         dd    0
 
 section .bss
     ent:      resb    100
@@ -248,26 +228,32 @@ _start:
     jmp over
 
     quickSort:
-        print teste, 5
-        print newLine,1
-        print array,[lenA]
-        print newLine,1
+        ;print teste, 5
+        ;print newLine,1
+        ;print array,[lenA],1
+        ;print newLine,1
+        
         
         mov ecx, [began]
         mov [i], ecx
+        ;i é a primeira posição
         
         mov dword eax, 0
         add eax, ecx
+        
         
         mov ecx, [end]
         add eax, ecx
         
         sub dword ecx, 1
         mov [j], ecx
+        ;j = end -1
         
-        div dword [dois]
-        mov al, [array+eax] 
+        ;div dword [dois]
+        ;pivo agora é a última posição
+        mov al, [array+ecx] 
         mov [pivot], al
+        ;print pivot, 1
         
         whileIJ:
             mov ecx, [j]
@@ -327,8 +313,6 @@ _start:
         
         push dword [end]
         push dword [i]
-                print testeB, 1
-                print newLine,1
         
         inc eax
         mov [end], eax
@@ -342,8 +326,6 @@ _start:
         cmp eax, [end]
         jge endQuickSort
             
-            print testeC, 1
-            print newLine,1
         
         mov [began], eax
         call quickSort
@@ -352,9 +334,9 @@ _start:
         ret
     
     over:
-        print newLine,1
-        print array,[lenA]
-        print newLine,1
+        ;print newLine,1
+        print array,[lenA],3
+        ;print newLine,1
     
         mov     eax, 1
         int     0x80
